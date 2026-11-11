@@ -1,0 +1,54 @@
+
+name: Build TouchBarOff
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-15
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Build Intel version
+        run: |
+          swiftc -O \
+            -target x86_64-apple-macos10.15 \
+            main.swift -o touchbar-intel
+
+      - name: Build Apple Silicon version
+        run: |
+          swiftc -O \
+            -target arm64-apple-macos11.0 \
+            main.swift -o touchbar-arm
+
+      - name: Create universal application
+        run: |
+          mkdir -p TouchBarOff.app/Contents/MacOS
+
+          cp Info.plist TouchBarOff.app/Contents/Info.plist
+
+          lipo -create \
+            touchbar-intel touchbar-arm \
+            -output TouchBarOff.app/Contents/MacOS/TouchBarOff
+
+          chmod +x TouchBarOff.app/Contents/MacOS/TouchBarOff
+
+          codesign --force --sign - TouchBarOff.app
+
+      - name: Package application
+        run: |
+          ditto -c -k --sequesterRsrc \
+            TouchBarOff.app TouchBarOff.zip
+
+      - name: Upload finished application
+        uses: actions/upload-artifact@v4
+        with:
+          name: TouchBarOff-macOS
+          path: TouchBarOff.zip
+          retention-days: 30
