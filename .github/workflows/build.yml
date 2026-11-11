@@ -27,6 +27,7 @@ jobs:
             -target arm64-apple-macos11.0 \
             main.swift -o touchbar-arm
 
+      
       - name: Create universal application
         run: |
           mkdir -p TouchBarOff.app/Contents/MacOS
@@ -37,14 +38,31 @@ jobs:
             touchbar-intel touchbar-arm \
             -output TouchBarOff.app/Contents/MacOS/TouchBarOff
 
-          chmod +x TouchBarOff.app/Contents/MacOS/TouchBarOff
+          chmod 755 TouchBarOff.app/Contents/MacOS/TouchBarOff
 
           codesign --force --sign - TouchBarOff.app
 
-      - name: Package application
+      - name: Package and verify application
         run: |
-          ditto -c -k --sequesterRsrc \
+          # Check the executable was created
+          test -x TouchBarOff.app/Contents/MacOS/TouchBarOff
+
+          # Create ZIP preserving the .app folder
+          ditto -c -k --sequesterRsrc --keepParent \
             TouchBarOff.app TouchBarOff.zip
+
+          # Extract ZIP on the build machine
+          mkdir verification
+          ditto -x -k TouchBarOff.zip verification
+
+          # Verify the extracted executable exists
+          test -x verification/TouchBarOff.app/Contents/MacOS/TouchBarOff
+
+          # Verify the application bundle
+          codesign --verify --verbose=2 \
+            verification/TouchBarOff.app
+
+          echo "Application successfully packaged and verified"
 
       - name: Upload finished application
         uses: actions/upload-artifact@v4
