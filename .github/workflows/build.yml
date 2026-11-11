@@ -18,7 +18,7 @@ jobs:
       - name: Build Intel version
         run: |
           swiftc -O \
-            -target x86_64-apple-macos10.15 \
+            -target x86_64-apple-macos11.0 \
             main.swift -o touchbar-intel
 
       - name: Build Apple Silicon version
